@@ -46,24 +46,23 @@ from optparse import OptionParser
 version = __import__('django-future-url').get_version()
 
 CURRENT_PATH = os.path.abspath('.')
-template_files = []
 load_tag = "{% load url from future %}"
 file_formats = ['.html', '.txt']
 
 re_flags = re.I | re.X | re.U
 
 # Устаревший url тег
-r_depr_url_finder = re.compile(ur" {% \s* url \s+ [^\"\'\s]+ \s+ ", re_flags)
+r_depr_url_finder = re.compile(r" {% \s* url \s+ [^\"\'\s]+ \s+ ", re_flags)
 
 # Любой url тег
-r_url_finder = re.compile(ur"{% \s* url \s+ ", re_flags)
+r_url_finder = re.compile(r"{% \s* url \s+ ", re_flags)
 # Тег разгрузки url из будущего
-r_load_finder = re.compile(ur" {% \s* load \s+ url \s+ from \s+ future \s* %} ", re_flags)
+r_load_finder = re.compile(r" {% \s* load \s+ url \s+ from \s+ future \s* %} ", re_flags)
 # Тег extends
-r_extends_finder = re.compile(ur"{% \s* extends \s* \S+ \s* %}", re_flags)
+r_extends_finder = re.compile(r"{% \s* extends \s* \S+ \s* %}", re_flags)
 
 # Для замены тега url
-r_url_pattern = re.compile(ur"""
+r_url_pattern = re.compile(r"""
     (?P<before> {% \s*
         url \s+ )
         (?P<name> \S+ )
@@ -73,7 +72,7 @@ r_url_pattern = re.compile(ur"""
 
 # Для вставки тега load, когда тег extends есть в шаблоне
 r_load_extends_pattern = re.compile(
-    ur"(?P<template_head> [\s\S]* {% \s* extends \s* \S+ \s* %} )",
+    r"(?P<template_head> [\s\S]* {% \s* extends \s* \S+ \s* %} )",
     re_flags | re.M,
 )
 
@@ -108,16 +107,14 @@ def make_me_magic():
     """
 
     # Находим файлы с подходящим расширением.
-    os.path.walk(CURRENT_PATH, search_template_files, template_files)
-
-    for file_path in template_files:
+    for file_path in find_files(os.walk(CURRENT_PATH)):
         with open(file_path, 'r+') as t_file:
             file_content = t_file.read()
 
             # Проверяем наличие в файле старых тегов или
             # отсутствие «load» тега.
             if has_deprecated_tag(file_content):
-                print file_path
+                print(file_path)
 
                 # Обрабатываем файлы с «deprecated» url тегами.
                 if r_depr_url_finder.search(file_content):
@@ -186,18 +183,23 @@ def has_deprecated_tag(html):
     return not has_load_tag and (r_depr_url_finder.search(html) or r_url_finder.search(html))
 
 
+def find_files(paths):
+    for dirpath, _, filenames in paths:
+        for path in search_template_files(file_formats, dirpath, filenames):
+            yield path
+
+
 def search_template_files(template_files, dirname, fnames):
     """ Поиск подходящих файлов. """
 
     for file_name in fnames:
         if os.path.splitext(file_name)[1] in file_formats:
-            file_path = os.path.join(dirname, file_name)
-            template_files.append(file_path)
+            yield os.path.join(dirname, file_name)
 
 
 def message(txt):
     if getattr(options, 'verbose', False) or getattr(options, 'dryrun', False):
-        print txt
+        print(txt)
 
 
 if __name__ == '__main__':
